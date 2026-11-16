@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ProveedorSesion, useSesion } from "../context/SesionContext";
 import RutaProtegida from "../components/RutaProtegida";
 import { crearCliente } from "../services/clienteHttp";
+import { milisegundosHastaExpirar, milisegundosParaRenovar } from "../utils/token";
 import { PERFILES, dejarSesionAbierta, simularApi } from "../test/apiFalsa";
 
 // Vista mínima para comprobar qué deja pasar la ruta protegida.
@@ -42,10 +43,26 @@ function renderConRutas(elemento, ruta) {
   );
 }
 
+// Armo un token de prueba con la expiración que necesito. La firma es de
+// relleno porque el frontend solo lee la carga útil; validarla es del backend.
+function tokenConExpiracion(segundosDesdeAhora) {
+  const carga = {
+    sub: "admin@nutrivida.cl",
+    rol: "ADMIN",
+    exp: Math.floor(Date.now() / 1000) + segundosDesdeAhora,
+  };
+  const base = btoa(JSON.stringify(carga)).split("+").join("-").split("/").join("_");
+  return `cabecera.${base}.firma`;
+}
+
 beforeEach(() => {
   cleanup();
   localStorage.clear();
   sessionStorage.clear();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("Gestión de sesión y restricción por rol", () => {
@@ -121,5 +138,81 @@ describe("Cliente HTTP compartido", () => {
     const { falsa } = simularApi({});
     falsa.mockRejectedValueOnce(new Error("conexión rechazada"));
     await expect(cliente.solicitar("/servicios")).rejects.toThrow(/no pudimos conectarnos/i);
+  });
+});
+
+describe("Renovación del token antes de que venza", () => {
+  it("calcula el plazo a partir de la expiración del token", () => {
+    const token = tokenConExpiracion(3600);
+    expect(milisegundosHastaExpirar(token)).toBeGreaterThan(3500 * 1000);
+    // Renuevo dos minutos antes del vencimiento.
+    expect(milisegundosParaRenovar(token)).toBeLessThan(3500 * 1000);
+    expect(milisegundosParaRenovar(token)).toBeGreaterThan(3400 * 1000);
+  });
+
+  it("nunca programa la renovación con menos de treinta segundos", () => {
+    expect(milisegundosParaRenovar(tokenConExpiracion(10))).toBe(30 * 1000);
+  });
+
+  it("usa un plazo por defecto si el token no trae expiración legible", () => {
+    expect(milisegundosHastaExpirar("token-sin-forma-de-jwt")).toBe(50 * 60 * 1000);
+  });
+
+  it("pide un token nuevo y lo guarda sin devolver a la persona al login", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const tokenNuevo = tokenConExpiracion(3600);
+    const { peticiones } = simularApi({
+      "/auth/perfil": { estado: 200, cuerpo: PERFILES.ADMIN },
+      "/auth/renovar": {
+        estado: 200,
+        cuerpo: { token: tokenNuevo, ...PERFILES.ADMIN },
+      },
+    });
+    sessionStorage.setItem("nutrivida_token", tokenConExpiracion(130));
+    sessionStorage.setItem("nutrivida_usuario", JSON.stringify(PERFILES.ADMIN));
+
+    render(
+      <MemoryRouter>
+        <ProveedorSesion><EstadoSesion /></ProveedorSesion>
+      </MemoryRouter>,
+    );
+    await screen.findByText(/Sesión de Administrador NutriVida/);
+
+    // Avanzo el reloj hasta el momento en que toca renovar.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(31 * 1000);
+    });
+
+    await waitFor(() => {
+      expect(peticiones.some((peticion) => peticion.url.includes("/auth/renovar"))).toBe(true);
+    });
+    await waitFor(() => {
+      expect(sessionStorage.getItem("nutrivida_token")).toBe(tokenNuevo);
+    });
+    expect(screen.getByText(/Sesión de Administrador NutriVida/)).toBeInTheDocument();
+  });
+
+  it("cierra la sesión si la renovación responde 401", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    simularApi({
+      "/auth/perfil": { estado: 200, cuerpo: PERFILES.ADMIN },
+      "/auth/renovar": { estado: 401, cuerpo: { error: "Token vencido." } },
+    });
+    sessionStorage.setItem("nutrivida_token", tokenConExpiracion(130));
+    sessionStorage.setItem("nutrivida_usuario", JSON.stringify(PERFILES.ADMIN));
+
+    render(
+      <MemoryRouter>
+        <ProveedorSesion><EstadoSesion /></ProveedorSesion>
+      </MemoryRouter>,
+    );
+    await screen.findByText(/Sesión de Administrador NutriVida/);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(31 * 1000);
+    });
+
+    expect(await screen.findByText(/Sin sesión/)).toBeInTheDocument();
+    expect(sessionStorage.getItem("nutrivida_token")).toBeNull();
   });
 });

@@ -52,6 +52,15 @@ horario ocupado aparece con su propio texto en el formulario de reserva.
 expone `cargando`, para que una recarga no muestre un parpadeo de
 "no autenticado". Si el perfil responde 401 limpia la sesión completa.
 
+### Renovación del token
+
+Antes de que el token venza, el contexto llama a `POST /auth/renovar` y guarda
+el token nuevo sin pedir otra vez la contraseña. El plazo se calcula leyendo la
+fecha de expiración de la carga útil del propio token (`src/utils/token.js`) y
+se programa dos minutos antes, con un mínimo de treinta segundos. Si la
+renovación responde 401 (token vencido o cuenta desactivada) la sesión se
+cierra; ante un fallo de red se conserva lo que ya había.
+
 ## IE3.3.3 · Restricción de acceso por rol
 
 `src/components/RutaProtegida.jsx` agrupa las rutas en `src/App.jsx`:

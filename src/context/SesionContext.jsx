@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { obtenerPerfil } from "../services/authService";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { obtenerPerfil, renovarSesion } from "../services/authService";
+import { milisegundosParaRenovar } from "../utils/token";
 
 // Guardo la sesión en sessionStorage para que sobreviva a una recarga de la
 // página pero se cierre al cerrar la pestaña (indicador IE3.3.2).
@@ -35,6 +36,9 @@ export function ProveedorSesion({ children }) {
   // Arranco en estado de carga solo si hay un token por revalidar; así evito el
   // parpadeo de "no autenticado" justo después de recargar.
   const [cargando, setCargando] = useState(() => Boolean(leerAlmacenado(CLAVE_TOKEN)));
+  // Marco los cambios de token que vienen de una renovación: en ese caso el
+  // backend ya me devolvió el perfil y no necesito volver a consultarlo.
+  const tokenRenovado = useRef(false);
 
   // Limpio por completo la sesión, tanto en memoria como en el almacenamiento.
   const cerrarSesion = useCallback(() => {
@@ -54,6 +58,13 @@ export function ProveedorSesion({ children }) {
     if (!token) {
       setCargando(false);
       return;
+    }
+
+    // Si el token acaba de renovarse, el perfil ya está al día.
+    if (tokenRenovado.current) {
+      tokenRenovado.current = false;
+      setCargando(false);
+      return undefined;
     }
 
     let vigente = true;
@@ -83,6 +94,40 @@ export function ProveedorSesion({ children }) {
       vigente = false;
     };
   }, [token, cerrarSesion]);
+
+  // Antes de que el token venza pido uno nuevo con POST /auth/renovar, así la
+  // persona sigue trabajando sin que la expulse al login a mitad de una
+  // consulta. Si el backend responde 401 (token vencido o cuenta desactivada)
+  // cierro la sesión, que es el único caso en que corresponde salir.
+  useEffect(() => {
+    if (!token || cargando) return undefined;
+
+    let vigente = true;
+    const espera = setTimeout(() => {
+      renovarSesion(token)
+        .then((sesion) => {
+          if (!vigente || !sesion?.token) return;
+          const { token: tokenNuevo, ...perfil } = sesion;
+          try {
+            sessionStorage.setItem(CLAVE_TOKEN, tokenNuevo);
+            sessionStorage.setItem(CLAVE_USUARIO, JSON.stringify(perfil));
+          } catch {
+            // Sin almacenamiento la sesión renovada vive solo en memoria.
+          }
+          tokenRenovado.current = true;
+          setUsuario(perfil);
+          setToken(tokenNuevo);
+        })
+        .catch((error) => {
+          if (vigente && error?.estado === 401) cerrarSesion();
+        });
+    }, milisegundosParaRenovar(token));
+
+    return () => {
+      vigente = false;
+      clearTimeout(espera);
+    };
+  }, [token, cargando, cerrarSesion]);
 
   // Guardo token y usuario tras un login correcto.
   const iniciarSesion = useCallback((datosSesion) => {

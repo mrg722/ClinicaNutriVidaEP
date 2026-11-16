@@ -26,3 +26,10 @@ export function registrar(nombre, correo, password) {
 export function obtenerPerfil(token) {
   return cliente.solicitar("/auth/perfil", { token });
 }
+
+// Pido un token nuevo presentando el que todavía está vigente, para prolongar
+// la sesión sin volver a pedir la contraseña. Devuelve lo mismo que el login y
+// responde 401 si el token ya no sirve o la cuenta quedó desactivada.
+export function renovarSesion(token) {
+  return cliente.solicitar("/auth/renovar", { metodo: "POST", token });
+}
