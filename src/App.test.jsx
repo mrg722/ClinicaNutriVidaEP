@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
+import { PERFILES, dejarSesionAbierta, simularApi } from "./test/apiFalsa";
 
 beforeEach(() => {
   cleanup();
@@ -91,13 +92,36 @@ describe("Aplicación NutriVida", () => {
     ["/carrito", "Tu carrito"],
     ["/reserva", "Agendar una cita"],
     ["/contacto", "Contacto"],
-    ["/admin", "Administración de productos"],
     ["/login", "Iniciar sesión"],
     ["/registro", "Crear cuenta"],
   ])("renderiza la ruta %s", (ruta, encabezado) => {
     window.history.pushState({}, "", ruta);
     render(<App />);
     expect(screen.getByRole("heading", { name: encabezado })).toBeInTheDocument();
+  });
+
+  it("envía al login cuando se entra a administración sin sesión", async () => {
+    window.history.pushState({}, "", "/admin");
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
+  });
+
+  it("muestra administración cuando la sesión es de perfil administrador", async () => {
+    simularApi({ "/auth/perfil": { estado: 200, cuerpo: PERFILES.ADMIN } });
+    dejarSesionAbierta("ADMIN");
+    window.history.pushState({}, "", "/admin");
+    render(<App />);
+    expect(
+      await screen.findByRole("heading", { name: "Administración de productos" }),
+    ).toBeInTheDocument();
+  });
+
+  it("niega el panel de administración a un perfil paciente", async () => {
+    simularApi({ "/auth/perfil": { estado: 200, cuerpo: PERFILES.PACIENTE } });
+    dejarSesionAbierta("PACIENTE");
+    window.history.pushState({}, "", "/admin");
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: "Sin permiso" })).toBeInTheDocument();
   });
 
   it("usa el catálogo original si la persistencia de productos no contiene una lista", () => {
@@ -145,8 +169,11 @@ describe("Aplicación NutriVida", () => {
 
   it("integra el alta y la eliminación local desde administración", async () => {
     const user = userEvent.setup();
+    simularApi({ "/auth/perfil": { estado: 200, cuerpo: PERFILES.ADMIN } });
+    dejarSesionAbierta("ADMIN");
     window.history.pushState({}, "", "/admin");
     render(<App />);
+    await user.click(await screen.findByRole("button", { name: "Catálogo local" }));
     await user.type(screen.getByLabelText("Nombre"), "Servicio de prueba integrado");
     await user.selectOptions(screen.getByLabelText("Categoría"), "Taller");
     await user.type(screen.getByLabelText("Precio en pesos chilenos"), "17000");
@@ -175,26 +202,42 @@ describe("Aplicación NutriVida", () => {
     expect(screen.getByText("El carrito está vacío.")).toBeInTheDocument();
   });
 
-  it("reconoce el perfil administrativo del acceso de demostración", async () => {
+  it("lleva al panel cuando el backend autentica un perfil administrador", async () => {
     const user = userEvent.setup();
+    simularApi({
+      "/auth/login": {
+        estado: 200,
+        cuerpo: { token: "token-admin", ...PERFILES.ADMIN },
+      },
+      "/auth/perfil": { estado: 200, cuerpo: PERFILES.ADMIN },
+    });
     window.history.pushState({}, "", "/login");
     render(<App />);
-    await user.type(screen.getByLabelText("Correo electrónico"), "admin@duoc.cl");
-    await user.type(screen.getByLabelText("Contraseña"), "1234");
+    await user.type(screen.getByLabelText("Correo electrónico"), "admin@nutrivida.cl");
+    await user.type(screen.getByLabelText("Contraseña"), "Cambiar123!");
     await user.click(screen.getByRole("button", { name: "Validar acceso" }));
-    expect(screen.getByText(/Perfil detectado: Administrador/)).toBeInTheDocument();
-    await user.click(screen.getByRole("link", { name: "Ir a administración" }));
-    expect(screen.getByRole("heading", { name: "Administración de productos" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Administración de productos" }),
+    ).toBeInTheDocument();
+    expect(sessionStorage.getItem("nutrivida_token")).toBe("token-admin");
   });
 
-  it("reconoce el perfil nutricionista en el acceso de demostración", async () => {
+  it("lleva a la agenda cuando el backend autentica un perfil nutricionista", async () => {
     const user = userEvent.setup();
+    simularApi({
+      "/auth/login": {
+        estado: 200,
+        cuerpo: { token: "token-nutri", ...PERFILES.NUTRICIONISTA },
+      },
+      "/auth/perfil": { estado: 200, cuerpo: PERFILES.NUTRICIONISTA },
+      "/citas/mias": { estado: 200, cuerpo: [] },
+    });
     window.history.pushState({}, "", "/login");
     render(<App />);
-    await user.type(screen.getByLabelText("Correo electrónico"), "nutricionista@duoc.cl");
-    await user.type(screen.getByLabelText("Contraseña"), "1234");
+    await user.type(screen.getByLabelText("Correo electrónico"), "carolina.fuentes@nutrivida.cl");
+    await user.type(screen.getByLabelText("Contraseña"), "Cambiar123!");
     await user.click(screen.getByRole("button", { name: "Validar acceso" }));
-    expect(screen.getByText(/Perfil detectado: Nutricionista/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Agenda" })).toBeInTheDocument();
   });
 
   it("conserva otro producto al incrementar uno y permite eliminar y vaciar el carrito", async () => {
@@ -253,27 +296,22 @@ describe("Aplicación NutriVida", () => {
     await user.type(screen.getByLabelText("Correo electrónico"), "admin@duoc.cl");
     await user.type(screen.getByLabelText("Contraseña"), "12");
     await user.click(screen.getByRole("button", { name: "Validar acceso" }));
-    expect(screen.getByText("La contraseña debe tener entre 4 y 10 caracteres.")).toBeInTheDocument();
+    expect(screen.getByText("La contraseña debe tener al menos 4 caracteres.")).toBeInTheDocument();
     expect(screen.queryByText(/Perfil detectado/)).not.toBeInTheDocument();
   });
 
-  it("expone un mensaje si el navegador rechaza guardar la sesión de demostración", async () => {
+  it("muestra el mensaje del backend cuando las credenciales no son válidas", async () => {
     const user = userEvent.setup();
-    const setItemOriginal = Storage.prototype.setItem;
-    const espia = vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (clave, valor) {
-      if (clave === "nutrivida_sesion") {
-        throw new Error("Almacenamiento de sesión no disponible");
-      }
-      return setItemOriginal.call(this, clave, valor);
+    simularApi({
+      "/auth/login": { estado: 401, cuerpo: { error: "Credenciales inválidas." } },
     });
-
     window.history.pushState({}, "", "/login");
     render(<App />);
-    await user.type(screen.getByLabelText("Correo electrónico"), "admin@duoc.cl");
-    await user.type(screen.getByLabelText("Contraseña"), "1234");
+    await user.type(screen.getByLabelText("Correo electrónico"), "admin@nutrivida.cl");
+    await user.type(screen.getByLabelText("Contraseña"), "clave-incorrecta");
     await user.click(screen.getByRole("button", { name: "Validar acceso" }));
-    expect(screen.getByText("El navegador no pudo guardar la sesión de demostración.")).toBeInTheDocument();
-    espia.mockRestore();
+    expect(await screen.findByText("Credenciales inválidas.")).toBeInTheDocument();
+    expect(sessionStorage.getItem("nutrivida_token")).toBeNull();
   });
 
   it("rechaza un correo no permitido en el acceso", async () => {
@@ -283,7 +321,7 @@ describe("Aplicación NutriVida", () => {
     await user.type(screen.getByLabelText("Correo electrónico"), "ana@example.com");
     await user.type(screen.getByLabelText("Contraseña"), "1234");
     await user.click(screen.getByRole("button", { name: "Validar acceso" }));
-    expect(screen.getByText("Usa @duoc.cl, @profesor.duoc.cl o @gmail.com.")).toBeInTheDocument();
+    expect(screen.getByText("Usa @duoc.cl, @profesor.duoc.cl, @gmail.com o @nutrivida.cl.")).toBeInTheDocument();
     expect(screen.queryByText(/Perfil detectado/)).not.toBeInTheDocument();
   });
 
@@ -294,7 +332,7 @@ describe("Aplicación NutriVida", () => {
     await user.type(screen.getByLabelText("Correo electrónico"), "admin@duoc.cl");
     await user.type(screen.getByLabelText("Contraseña"), "12");
     await user.click(screen.getByRole("button", { name: "Validar acceso" }));
-    expect(screen.getByText("La contraseña debe tener entre 4 y 10 caracteres.")).toBeInTheDocument();
+    expect(screen.getByText("La contraseña debe tener al menos 4 caracteres.")).toBeInTheDocument();
   });
 
   it("rechaza una contraseña demasiado corta durante el registro", async () => {
@@ -305,7 +343,7 @@ describe("Aplicación NutriVida", () => {
     await user.type(screen.getByLabelText("Correo electrónico"), "ana@gmail.com");
     await user.type(screen.getByLabelText("Contraseña"), "12");
     await user.click(screen.getByRole("button", { name: "Validar registro" }));
-    expect(screen.getByText("La contraseña debe tener entre 4 y 10 caracteres.")).toBeInTheDocument();
+    expect(screen.getByText("La contraseña debe tener al menos 4 caracteres.")).toBeInTheDocument();
   });
 
 });

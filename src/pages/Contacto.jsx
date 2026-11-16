@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Alert, Button, Container, Form } from "react-bootstrap";
+import { Alert, Button, Col, Container, Form, Row } from "react-bootstrap";
+import MapaClinica from "../components/MapaClinica";
+import EncabezadoSeccion from "../components/ui/EncabezadoSeccion";
 import { validarCorreo, validarNombre, validarMotivoConsulta, validarTelefono } from "../utils/validaciones";
 
 export default function Contacto() {
@@ -28,10 +30,15 @@ export default function Contacto() {
 
   return (
     <Container as="main" className="nv-section">
-      <p className="nv-eyebrow">ESTAMOS PARA AYUDARTE</p>
-      <h1>Contacto</h1>
+      <EncabezadoSeccion
+        contexto="ESTAMOS PARA AYUDARTE"
+        titulo="Contacto"
+        descripcion="Escríbenos o visítanos en nuestra consulta de Temuco."
+      />
       <p className="small text-secondary">Formulario de demostración: no ingreses información sensible; no hay envío a un servidor.</p>
       {enviado ? <Alert variant="success" role="status">Formulario validado. En esta versión no se envían mensajes a un servidor.</Alert> : null}
+      <Row className="g-4">
+      <Col lg={7}>
       <Form onSubmit={enviar} noValidate className="nv-form" aria-label="Formulario de contacto">
         <Form.Group className="mb-3" controlId="contacto-nombre">
           <Form.Label>Nombre</Form.Label>
@@ -60,6 +67,19 @@ export default function Contacto() {
         </Form.Group>
         <Button type="submit" variant="success">Validar mensaje</Button>
       </Form>
+      </Col>
+      {/* Mapa interactivo con la ubicación real de la clínica en Temuco. */}
+      <Col lg={5}>
+        <section className="nv-mapa-panel" aria-label="Ubicación de la clínica">
+          <h2 className="h4">Dónde encontrarnos</h2>
+          <p className="mb-2">Clínica NutriVida · Temuco, Región de La Araucanía.</p>
+          <MapaClinica />
+          <p className="small text-secondary mt-2">
+            Atención de lunes a sábado según la agenda de cada profesional.
+          </p>
+        </section>
+      </Col>
+      </Row>
     </Container>
   );
 }
