@@ -414,8 +414,16 @@ textarea:focus-visible,
   font-size: 0.9rem;
 }
 
+/* Evito que las fechas y los datos cortos se partan en varias líneas. */
+.nv-tabla tbody th[scope="row"],
+.nv-tabla td:not(.nv-celda-motivo) {
+  white-space: nowrap;
+}
+
 .nv-celda-motivo {
   max-width: 24ch;
+  min-width: 16ch;
+  white-space: normal;
 }
 
 /* Pestañas del panel de administración. */
