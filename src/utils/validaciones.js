@@ -1,4 +1,7 @@
 const PATRON_CORREO = /^[^\s@]+@(duoc\.cl|profesor\.duoc\.cl|gmail\.com)$/i;
+// Las cuentas del backend usan el dominio institucional de la clínica, así que
+// el acceso y el registro aceptan además @nutrivida.cl.
+const PATRON_CORREO_CUENTA = /^[^\s@]+@(duoc\.cl|profesor\.duoc\.cl|gmail\.com|nutrivida\.cl)$/i;
 const PATRON_NOMBRE = /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]{2,100}$/;
 const PATRON_TELEFONO = /^\+?\d[\d\s-]{7,14}$/;
 
@@ -8,6 +11,11 @@ export function normalizarCorreo(valor) {
 
 export function validarCorreo(valor) {
   return PATRON_CORREO.test(normalizarCorreo(valor));
+}
+
+// Uso esta variante solo en el inicio de sesión y el registro de cuentas.
+export function validarCorreoCuenta(valor) {
+  return PATRON_CORREO_CUENTA.test(normalizarCorreo(valor));
 }
 
 export function validarNombre(valor) {

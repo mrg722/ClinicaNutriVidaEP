@@ -19,3 +19,9 @@ coverage/
 .env
 .env.*
 !.env.example
+# Mantengo versionados los archivos de entorno sin secretos que definen las URL de las APIs.
+!.env.development
+!.env.production
+
+# Configuracion local del editor
+.claude/

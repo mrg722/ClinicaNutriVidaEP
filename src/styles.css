@@ -1,7 +1,55 @@
+/* Tipografía institucional cargada desde Google Fonts: una fuente con buena
+   lectura en pantalla para textos y titulares. */
+@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap");
+
+/* Defino aquí la paleta y la escala de espaciado de la clínica. Al tenerlas
+   como variables, todas las vistas usan los mismos colores y medidas. */
 :root {
-  font-family: Arial, Helvetica, sans-serif;
-  color: #26352f;
-  background: #f7f9f6;
+  /* Verdes de la identidad nutricional. */
+  --nv-principal: #1d6b52;
+  --nv-principal-oscuro: #124736;
+  --nv-principal-claro: #e7f2e9;
+  --nv-acento: #d98324;
+  --nv-acento-claro: #fdf1e2;
+
+  /* Superficies y textos. */
+  --nv-fondo: #f6f9f5;
+  --nv-superficie: #ffffff;
+  --nv-superficie-suave: #f0f5f0;
+  --nv-borde: #dde6dd;
+  --nv-texto: #22332c;
+  --nv-texto-suave: #5b6b63;
+
+  /* Colores de estado generales. */
+  --nv-exito: #1d6b52;
+  --nv-advertencia: #b4690e;
+  --nv-error: #b02a28;
+  --nv-info: #1b5e86;
+
+  /* Colores propios de cada estado de una cita, iguales en toda la aplicación. */
+  --nv-estado-solicitada: #5b6b63;
+  --nv-estado-confirmada: #1d6b52;
+  --nv-estado-atendida: #1b5e86;
+  --nv-estado-cancelada: #3c4a44;
+  --nv-estado-no-asistio: #b4690e;
+
+  /* Escala fija de espaciado y de radios para no usar valores sueltos. */
+  --nv-espacio-1: 0.25rem;
+  --nv-espacio-2: 0.5rem;
+  --nv-espacio-3: 0.75rem;
+  --nv-espacio-4: 1rem;
+  --nv-espacio-5: 1.5rem;
+  --nv-espacio-6: 2rem;
+  --nv-espacio-7: 3rem;
+  --nv-radio: 0.75rem;
+  --nv-radio-grande: 1rem;
+  --nv-sombra: 0 4px 18px rgb(18 71 54 / 8%);
+  --nv-sombra-alta: 0 10px 30px rgb(18 71 54 / 14%);
+  --nv-transicion: 160ms ease-in-out;
+
+  font-family: "Nunito Sans", "Segoe UI", Arial, Helvetica, sans-serif;
+  color: var(--nv-texto);
+  background: var(--nv-fondo);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -9,35 +57,81 @@
 body {
   margin: 0;
   min-width: 320px;
-  background: #f7f9f6;
-  color: #26352f;
+  background: var(--nv-fondo);
+  color: var(--nv-texto);
+}
+
+/* Jerarquía tipográfica: títulos con tamaño fluido y buen interlineado. */
+h1 {
+  font-size: clamp(1.9rem, 1.3rem + 2vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: clamp(1.4rem, 1.1rem + 1vw, 1.8rem);
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+p {
+  line-height: 1.65;
 }
 
 a {
+  color: var(--nv-principal);
   text-decoration: none;
+  transition: color var(--nv-transicion);
 }
 
+a:hover {
+  color: var(--nv-acento);
+  text-decoration: underline;
+}
+
+/* Foco de teclado siempre perceptible, en cualquier elemento interactivo. */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible {
-  outline: 3px solid #a4d5b8;
+textarea:focus-visible,
+.nav-link:focus-visible {
+  outline: 3px solid var(--nv-acento);
   outline-offset: 3px;
+  border-radius: var(--nv-espacio-1);
 }
 
+/* ----------------------------- Navegación ------------------------------- */
 .nv-navbar {
-  background: #174c3c;
+  background: var(--nv-principal-oscuro);
+  box-shadow: var(--nv-sombra);
+}
+
+.nv-navbar .nav-link {
+  transition: color var(--nv-transicion), background var(--nv-transicion);
+  border-radius: var(--nv-espacio-2);
+  padding-inline: var(--nv-espacio-3);
+}
+
+.nv-navbar .nav-link:hover {
+  background: rgb(255 255 255 / 12%);
 }
 
 .nv-navbar .nav-link.active {
   text-decoration: underline;
   text-underline-offset: 0.35rem;
+  font-weight: 700;
 }
 
+/* ------------------------------ Estructura ------------------------------ */
 .nv-hero {
-  padding: 5rem 0;
-  background: #e7f2e9;
+  padding: var(--nv-espacio-7) 0;
+  background: linear-gradient(140deg, var(--nv-principal-claro), var(--nv-superficie));
 }
 
 .nv-hero-icon {
@@ -47,23 +141,54 @@ textarea:focus-visible {
 
 .nv-section {
   min-height: 60vh;
-  padding-top: 3rem;
-  padding-bottom: 3rem;
+  padding-top: var(--nv-espacio-7);
+  padding-bottom: var(--nv-espacio-7);
 }
 
 .nv-eyebrow {
-  color: #23664d;
+  color: var(--nv-principal);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  margin-bottom: var(--nv-espacio-1);
 }
 
+/* Encabezado reutilizable de cada vista. */
+.nv-encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--nv-espacio-4);
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: var(--nv-espacio-5);
+  padding-bottom: var(--nv-espacio-4);
+  border-bottom: 1px solid var(--nv-borde);
+}
+
+.nv-encabezado__texto {
+  margin: var(--nv-espacio-2) 0 0;
+  color: var(--nv-texto-suave);
+  max-width: 60ch;
+}
+
+.nv-origen {
+  color: var(--nv-texto-suave);
+  font-size: 0.92rem;
+}
+
+/* -------------------------------- Tarjetas ------------------------------ */
 .nv-card {
-  border: 0;
-  border-radius: 1rem;
-  box-shadow: 0 4px 18px rgb(0 0 0 / 7%);
+  border: 1px solid var(--nv-borde);
+  border-radius: var(--nv-radio-grande);
+  box-shadow: var(--nv-sombra);
   overflow: hidden;
+  transition: transform var(--nv-transicion), box-shadow var(--nv-transicion);
+}
+
+.nv-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--nv-sombra-alta);
 }
 
 .nv-service-icon {
@@ -81,44 +206,297 @@ textarea:focus-visible {
   width: 100%;
   max-height: 440px;
   object-fit: cover;
-  border-radius: 1rem;
+  border-radius: var(--nv-radio-grande);
 }
 
+.nv-lista-datos {
+  color: var(--nv-texto-suave);
+  padding-left: 1.1rem;
+}
+
+/* ------------------------------ Formularios ----------------------------- */
 .nv-form,
 .nv-form-panel {
   width: 100%;
   max-width: 760px;
-  padding: 1.5rem;
-  border: 1px solid #e1e8e2;
-  border-radius: 1rem;
-  background: #fff;
+  padding: var(--nv-espacio-5);
+  border: 1px solid var(--nv-borde);
+  border-radius: var(--nv-radio-grande);
+  background: var(--nv-superficie);
+  box-shadow: var(--nv-sombra);
 }
 
+.nv-filtro {
+  max-width: 320px;
+}
+
+.form-label {
+  font-weight: 600;
+  color: var(--nv-texto);
+}
+
+.btn {
+  transition: transform var(--nv-transicion), box-shadow var(--nv-transicion),
+    background var(--nv-transicion);
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.65;
+}
+
+.btn-success {
+  background: var(--nv-principal);
+  border-color: var(--nv-principal);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: var(--nv-principal-oscuro);
+  border-color: var(--nv-principal-oscuro);
+}
+
+.btn-outline-success {
+  color: var(--nv-principal);
+  border-color: var(--nv-principal);
+}
+
+.btn-outline-success:hover:not(:disabled) {
+  background: var(--nv-principal);
+  border-color: var(--nv-principal);
+}
+
+/* -------------------------- Estados de la interfaz ---------------------- */
 .nv-empty {
-  padding: 2rem;
+  padding: var(--nv-espacio-6);
   border: 1px dashed #b8cbbd;
-  border-radius: 1rem;
-  background: #fff;
+  border-radius: var(--nv-radio-grande);
+  background: var(--nv-superficie);
+  text-align: center;
 }
 
+.nv-empty__titulo {
+  font-weight: 700;
+  margin-bottom: var(--nv-espacio-2);
+}
+
+.nv-empty__texto {
+  color: var(--nv-texto-suave);
+  margin-bottom: var(--nv-espacio-4);
+}
+
+/* Esqueleto de carga: bloques que laten mientras llegan los datos. */
+.nv-esqueleto {
+  display: grid;
+  gap: var(--nv-espacio-3);
+  margin: var(--nv-espacio-4) 0;
+}
+
+.nv-esqueleto__linea {
+  display: block;
+  height: 1.6rem;
+  border-radius: var(--nv-radio);
+  background: linear-gradient(
+    90deg,
+    var(--nv-superficie-suave) 25%,
+    #e3ece3 37%,
+    var(--nv-superficie-suave) 63%
+  );
+  background-size: 400% 100%;
+  animation: nv-brillo 1.4s ease-in-out infinite;
+}
+
+.nv-esqueleto__linea:nth-child(even) {
+  width: 85%;
+}
+
+@keyframes nv-brillo {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* Respeto la preferencia de quien pide menos movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  .nv-esqueleto__linea {
+    animation: none;
+  }
+
+  .nv-card:hover,
+  .btn:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+.nv-error {
+  border-left: 4px solid var(--nv-error);
+}
+
+/* ------------------------ Insignias de estado de cita ------------------- */
+.nv-insignia {
+  display: inline-block;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  background: var(--nv-estado-solicitada);
+}
+
+.nv-insignia--solicitada { background: var(--nv-estado-solicitada); }
+.nv-insignia--confirmada { background: var(--nv-estado-confirmada); }
+.nv-insignia--atendida { background: var(--nv-estado-atendida); }
+.nv-insignia--cancelada { background: var(--nv-estado-cancelada); }
+.nv-insignia--no_asistio { background: var(--nv-estado-no-asistio); }
+
+/* --------------------------- Tarjetas de indicador ---------------------- */
+.nv-indicador {
+  height: 100%;
+  padding: var(--nv-espacio-5);
+  border: 1px solid var(--nv-borde);
+  border-radius: var(--nv-radio-grande);
+  background: var(--nv-superficie);
+  box-shadow: var(--nv-sombra);
+  border-top: 4px solid var(--nv-principal);
+}
+
+.nv-indicador--acento { border-top-color: var(--nv-acento); }
+.nv-indicador--claro { border-top-color: var(--nv-estado-atendida); }
+
+.nv-indicador__titulo {
+  margin: 0;
+  color: var(--nv-texto-suave);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.nv-indicador__valor {
+  margin: var(--nv-espacio-2) 0 0;
+  font-size: 2.1rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.nv-indicador__nota {
+  margin: var(--nv-espacio-1) 0 0;
+  color: var(--nv-texto-suave);
+  font-size: 0.9rem;
+}
+
+/* --------------------------------- Tablas ------------------------------- */
+.nv-tabla {
+  background: var(--nv-superficie);
+  border: 1px solid var(--nv-borde);
+  border-radius: var(--nv-radio-grande);
+  padding: var(--nv-espacio-2);
+}
+
+.nv-tabla table {
+  margin-bottom: 0;
+}
+
+.nv-tabla thead th {
+  color: var(--nv-texto-suave);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--nv-borde);
+}
+
+.nv-tabla caption {
+  caption-side: top;
+  padding: var(--nv-espacio-2) var(--nv-espacio-3);
+  color: var(--nv-texto-suave);
+  font-size: 0.9rem;
+}
+
+/* Evito que las fechas y los datos cortos se partan en varias líneas. */
+.nv-tabla tbody th[scope="row"],
+.nv-tabla td:not(.nv-celda-motivo) {
+  white-space: nowrap;
+}
+
+.nv-celda-motivo {
+  max-width: 24ch;
+  min-width: 16ch;
+  white-space: normal;
+}
+
+/* Pestañas del panel de administración. */
+.nv-pestanas .nav-link {
+  color: var(--nv-texto-suave);
+  font-weight: 600;
+}
+
+.nv-pestanas .nav-link.active {
+  color: var(--nv-principal);
+  border-bottom-color: var(--nv-superficie);
+}
+
+/* ---------------------------------- Mapa -------------------------------- */
+.nv-mapa-panel {
+  padding: var(--nv-espacio-5);
+  border: 1px solid var(--nv-borde);
+  border-radius: var(--nv-radio-grande);
+  background: var(--nv-superficie);
+  box-shadow: var(--nv-sombra);
+}
+
+.nv-mapa__lienzo {
+  height: 320px;
+  width: 100%;
+  border-radius: var(--nv-radio);
+  z-index: 0;
+}
+
+/* --------------------------------- Pie ---------------------------------- */
 .nv-footer {
-  padding: 1.5rem 0;
-  background: #174c3c;
+  padding: var(--nv-espacio-5) 0;
+  background: var(--nv-principal-oscuro);
   color: #fff;
 }
 
+.nv-footer a {
+  color: var(--nv-principal-claro);
+}
+
+/* ------------------------------ Responsive ------------------------------ */
 @media (max-width: 767.98px) {
   .nv-hero {
-    padding: 3rem 0;
+    padding: var(--nv-espacio-6) 0;
   }
 
   .nv-section {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
+    padding-top: var(--nv-espacio-5);
+    padding-bottom: var(--nv-espacio-5);
   }
 
   .nv-form,
   .nv-form-panel {
-    padding: 1rem;
+    padding: var(--nv-espacio-4);
+  }
+
+  /* En móvil los formularios quedan siempre en una sola columna. */
+  .nv-form .row > [class*="col-"],
+  .nv-form-panel .row > [class*="col-"] {
+    width: 100%;
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .nv-encabezado {
+    align-items: flex-start;
+  }
+
+  .nv-indicador__valor {
+    font-size: 1.8rem;
+  }
+
+  .nv-mapa__lienzo {
+    height: 260px;
   }
 }

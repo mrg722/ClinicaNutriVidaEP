@@ -1,7 +1,9 @@
-import { Badge, Container, Nav, Navbar } from "react-bootstrap";
-import { NavLink } from "react-router-dom";
+import { Badge, Button, Container, Nav, Navbar } from "react-bootstrap";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useSesion } from "../context/SesionContext";
 
-const enlaces = [
+// Enlaces visibles para cualquier visitante.
+const enlacesPublicos = [
   { to: "/", texto: "Inicio", fin: true },
   { to: "/servicios", texto: "Servicios" },
   { to: "/productos", texto: "Tienda" },
@@ -9,26 +11,46 @@ const enlaces = [
   { to: "/contacto", texto: "Contacto" },
 ];
 
+// Enlaces que dependen del rol: cada perfil ve solo lo que puede usar, por eso
+// un paciente nunca ve la agenda profesional ni la administración.
+const enlacesPorRol = {
+  PACIENTE: [
+    { to: "/mis-citas", texto: "Mis citas" },
+    { to: "/mi-progreso", texto: "Mi progreso" },
+  ],
+  NUTRICIONISTA: [
+    { to: "/agenda", texto: "Agenda" },
+    { to: "/ficha-clinica", texto: "Ficha clínica" },
+  ],
+  ADMIN: [
+    { to: "/mis-citas", texto: "Citas" },
+    { to: "/admin", texto: "Administración" },
+  ],
+};
+
 export default function Navegacion({ cantidadCarrito = 0 }) {
+  const { usuario, autenticado, rol, cerrarSesion } = useSesion();
+  const navegar = useNavigate();
+
+  function salir() {
+    cerrarSesion();
+    navegar("/", { replace: true });
+  }
+
+  const enlacesRol = (autenticado && enlacesPorRol[rol]) || [];
+
   return (
     <Navbar expand="lg" className="nv-navbar" variant="dark">
       <Container>
         <Navbar.Brand as={NavLink} to="/" className="fw-bold">
           Clínica NutriVida
         </Navbar.Brand>
-        <Navbar.Toggle
-          aria-controls="nutrivida-nav"
-          aria-label="Abrir navegación"
-        />
+        {/* El botón hamburguesa de React Bootstrap resuelve el menú en móvil. */}
+        <Navbar.Toggle aria-controls="nutrivida-nav" aria-label="Abrir navegación" />
         <Navbar.Collapse id="nutrivida-nav">
           <Nav className="ms-auto align-items-lg-center">
-            {enlaces.map((enlace) => (
-              <Nav.Link
-                key={enlace.to}
-                as={NavLink}
-                to={enlace.to}
-                end={enlace.fin}
-              >
+            {enlacesPublicos.map((enlace) => (
+              <Nav.Link key={enlace.to} as={NavLink} to={enlace.to} end={enlace.fin}>
                 {enlace.texto}
               </Nav.Link>
             ))}
@@ -39,12 +61,28 @@ export default function Navegacion({ cantidadCarrito = 0 }) {
             >
               Carrito <Badge bg="light" text="dark">{cantidadCarrito}</Badge>
             </Nav.Link>
-            <Nav.Link as={NavLink} to="/admin">
-              Administración
-            </Nav.Link>
-            <Nav.Link as={NavLink} to="/login">
-              Iniciar sesión
-            </Nav.Link>
+
+            {enlacesRol.map((enlace) => (
+              <Nav.Link key={enlace.to} as={NavLink} to={enlace.to}>
+                {enlace.texto}
+              </Nav.Link>
+            ))}
+
+            {autenticado ? (
+              <>
+                {/* Muestro el nombre de quien inició sesión y su perfil. */}
+                <span className="navbar-text text-white ms-lg-2 me-lg-2">
+                  {usuario?.nombre} ({rol})
+                </span>
+                <Button variant="outline-light" size="sm" onClick={salir}>
+                  Cerrar sesión
+                </Button>
+              </>
+            ) : (
+              <Nav.Link as={NavLink} to="/login">
+                Iniciar sesión
+              </Nav.Link>
+            )}
           </Nav>
         </Navbar.Collapse>
       </Container>
