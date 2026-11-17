@@ -44,7 +44,9 @@ export default function Administracion({ productos, onCrearProducto, onEliminarP
         descripcion="Gestiona las cuentas, el catálogo de servicios y revisa los indicadores de la clínica."
       />
 
-      {/* Navegación interna por pestañas para no mezclar todo en una pantalla. */}
+      {/* Navegación interna por pestañas para no mezclar todo en una pantalla. Guardo la pestaña
+          activa en el estado y monto solo la sección elegida: así cada sección pide sus datos al
+          backend recién cuando se abre, en vez de disparar cuatro consultas al entrar al panel. */}
       <Nav variant="tabs" className="nv-pestanas mb-4" activeKey={seccion} onSelect={(clave) => setSeccion(clave ?? "usuarios")}>
         <Nav.Item><Nav.Link eventKey="usuarios">Usuarios</Nav.Link></Nav.Item>
         <Nav.Item><Nav.Link eventKey="servicios">Catálogo de servicios</Nav.Link></Nav.Item>
@@ -112,6 +114,9 @@ function SeccionUsuarios({ token }) {
     setErrores(nuevos);
     if (Object.keys(nuevos).length > 0) return;
 
+    // Estas comprobaciones son solo para no gastar una llamada que ya sé que va a fallar. La
+    // validación que manda es la del backend: él revisa el correo duplicado y el rol permitido,
+    // porque es el único que ve todas las cuentas y el único al que no se le puede dar la vuelta.
     const cuerpo = {
       nombre: formulario.nombre.trim(),
       correo: formulario.correo.trim().toLowerCase(),
@@ -132,9 +137,14 @@ function SeccionUsuarios({ token }) {
       setFormulario(USUARIO_VACIO);
       setEditando(null);
       cargar();
+      // Recargo la lista desde el servidor en vez de insertar la fila a mano: así la tabla
+      // muestra lo que realmente quedó guardado, incluido el id que asignó la base de datos.
     } catch (problema) {
+      // Muestro el mensaje que viene del backend, no uno inventado por mí: él sabe si el correo
+      // estaba repetido o si el rol no existe, y ese detalle es lo que le sirve a quien gestiona.
       setErrores({ formulario: problema.message });
     } finally {
+      // Libero el botón en finally para que no quede bloqueado si la llamada terminó con error.
       setEnviando(false);
     }
   }
@@ -143,6 +153,8 @@ function SeccionUsuarios({ token }) {
     setEditando(usuario);
     setErrores({});
     setAviso("");
+    // Dejo la contraseña en blanco al cargar el formulario: el backend nunca devuelve la clave,
+    // y enviarla vacía es justamente la señal de que quiero conservar la que ya estaba.
     setFormulario({ ...usuario, password: "" });
   }
 
@@ -575,9 +587,15 @@ function SeccionEstadisticas({ token }) {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
+  // Envuelvo la carga en useCallback porque el useEffect de abajo la tiene como dependencia:
+  // sin esto la función sería nueva en cada renderizado y el efecto volvería a pedir las
+  // estadísticas una y otra vez, en un ciclo sin fin.
   const cargar = useCallback(() => {
     setCargando(true);
     setError("");
+    // Pido los indicadores calculados al backend en lugar de traer todas las citas y contarlas
+    // aquí: él los saca con consultas sobre la base, y así el navegador no descarga el historial
+    // completo de la clínica solo para mostrar tres números.
     obtenerEstadisticas(token)
       .then(setDatos)
       .catch((problema) => setError(problema.message))
@@ -591,6 +609,9 @@ function SeccionEstadisticas({ token }) {
   if (!datos) return <EstadoVacio titulo="Sin indicadores disponibles." />;
 
   // La tasa llega como número; la muestro como porcentaje con un decimal.
+  // Acepto las dos formas posibles, proporción (0,2) o porcentaje (20), y multiplico solo cuando
+  // viene como proporción: así un cambio de unidad en el backend no se vería como un 0,2 % en
+  // pantalla, que es un error difícil de notar porque igual muestra un número creíble.
   const inasistencia = Number(datos.tasaInasistencia ?? 0);
   const porcentaje = inasistencia <= 1 ? inasistencia * 100 : inasistencia;
 
