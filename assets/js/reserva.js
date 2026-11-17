@@ -1,9 +1,16 @@
+// Agendamiento de la primera entrega. Aquí no se consulta disponibilidad real: la reserva se
+// valida, se guarda en el navegador y se muestra en la página de confirmación. El control de
+// choques de horario y la cita definitiva son trabajo del backend, porque es el único que ve la
+// agenda completa de la clínica; este formulario solo revisa que los datos estén bien escritos.
 document.addEventListener('DOMContentLoaded', () =>
 {
     const form = document.getElementById('form-reserva');
 
     if (!form) return;
 
+    // Acepto el servicio preseleccionado por la URL para que, al llegar desde el catálogo con
+    // "reserva.html?servicio=CN001", el formulario venga ya elegido y la persona no tenga que
+    // buscarlo de nuevo en la lista.
     const params = new URLSearchParams(location.search);
 
     const service = document.getElementById('servicio');
@@ -15,6 +22,9 @@ document.addEventListener('DOMContentLoaded', () =>
 
     const date = document.getElementById('fecha');
 
+    // Pongo el mínimo del calendario en hoy: así el propio control del navegador impide elegir
+    // una fecha pasada, antes de que yo tenga que rechazarla con un mensaje. Lo calculo cada vez
+    // que se carga la página porque un valor fijo quedaría viejo al día siguiente.
     if (date)
     {
         date.min = new Date()
@@ -42,6 +52,8 @@ document.addEventListener('DOMContentLoaded', () =>
             }
         });
 
+        // Escucho también change, además de input: los selects y los campos de fecha y hora se
+        // llenan desde el control del navegador y en varios casos no emiten input al elegir.
         campo.addEventListener('change', () =>
         {
             const resultado = validar(campo.value);
@@ -100,10 +112,15 @@ document.addEventListener('DOMContentLoaded', () =>
             return 'Selecciona una fecha.';
         }
 
+        // Dejo la hora de hoy en 00:00 para comparar día contra día: si no, una cita de hoy más
+        // temprano aparecería como pasada solo por la hora en que se está usando la página.
         const today = new Date();
 
         today.setHours(0, 0, 0, 0);
 
+        // Le agrego 'T00:00:00' a propósito. Si construyera la fecha solo con "2026-03-15", el
+        // navegador la interpretaría en UTC y en Chile podría caer un día antes; con la hora
+        // explícita queda en horario local, que es el que ve la persona.
         const selected =
             new Date(value + 'T00:00:00');
 
@@ -119,6 +136,9 @@ document.addEventListener('DOMContentLoaded', () =>
             return 'Selecciona una hora.';
         }
 
+        // Comparo las horas como texto, que funciona porque el campo time entrega siempre el
+        // formato "HH:MM" con dos dígitos y ese orden ordena igual que el reloj. Las 09:00 y las
+        // 18:00 son el horario de atención de la clínica, no un límite técnico.
         return value >= '09:00' && value <= '18:00'
             ? true
             : 'Selecciona un horario entre 09:00 y 18:00.';
@@ -148,6 +168,8 @@ document.addEventListener('DOMContentLoaded', () =>
                 new FormData(form).entries()
             );
 
+        // Vuelvo a validar todo al enviar, porque la validación en vivo no se ejecuta si la
+        // persona no llega a tocar un campo. Este bloque es el que realmente decide si se agenda.
         if (!values.nombre.trim())
         {
             return setFieldError(
@@ -196,6 +218,8 @@ document.addEventListener('DOMContentLoaded', () =>
             );
         }
 
+        // Nutricionista y servicio son selects, así que solo necesito comprobar que haya algo
+        // elegido: las opciones posibles las define el HTML y no se escriben a mano.
         if (!values.nutricionista)
         {
             return setFieldError(
@@ -220,6 +244,9 @@ document.addEventListener('DOMContentLoaded', () =>
             );
         }
 
+        // Reviso la fecha de nuevo en el servidor de la lógica, por así decirlo: el atributo min
+        // del input es solo una ayuda del navegador y se puede quitar desde las herramientas de
+        // desarrollo, así que no me puedo apoyar únicamente en él.
         const today = new Date();
 
         today.setHours(0, 0, 0, 0);
@@ -270,11 +297,17 @@ document.addEventListener('DOMContentLoaded', () =>
             );
         }
 
+        // Guardo la reserva en sessionStorage para poder leerla en confirmacion.html: entre dos
+        // páginas HTML distintas no queda nada en memoria. Uso sessionStorage y no localStorage
+        // porque son datos de un trámite puntual, y no quiero que la reserva de alguien quede
+        // guardada en el navegador después de cerrar la pestaña.
         sessionStorage.setItem(
             'nutrivida_reserva',
             JSON.stringify(values)
         );
 
+        // Navego con location.href en lugar de mostrar el resumen aquí, porque la confirmación es
+        // una página aparte del flujo y así queda en el historial como un paso propio.
         location.href = 'confirmacion.html';
     });
 });

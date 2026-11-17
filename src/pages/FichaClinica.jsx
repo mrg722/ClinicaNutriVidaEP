@@ -26,7 +26,13 @@ const FORMULARIO_VACIO = {
 export default function FichaClinica() {
   const { token } = useSesion();
   const [parametros, setParametros] = useSearchParams();
-  // Acepto el correo por la URL para llegar desde la agenda con un clic.
+  // Acepto el correo por la URL para llegar desde la agenda con un clic. Tener el correo en la
+  // dirección además hace que la ficha se pueda recargar o guardar como enlace y siga abriendo
+  // al mismo paciente. Que venga por la URL no abre un hueco: el backend comprueba que quien
+  // pregunta sea el dueño de la ficha o su nutricionista, y si no, responde 403.
+  // Llevo dos estados separados a propósito: "correo" es lo que se está escribiendo en el buscador
+  // y "consultado" es la ficha que de verdad se está mostrando. Si usara uno solo, la lista
+  // intentaría recargarse con cada letra que se teclea.
   const [correo, setCorreo] = useState(parametros.get("correo") ?? "");
   const [consultado, setConsultado] = useState(parametros.get("correo") ?? "");
   const [mediciones, setMediciones] = useState([]);
@@ -78,7 +84,9 @@ export default function FichaClinica() {
   }
 
   // Valido lo mínimo antes de enviar: fecha, peso y talla son obligatorios y
-  // deben ser números positivos.
+  // deben ser números positivos. Exijo talla mayor que cero porque es el divisor del IMC, así que
+  // un cero haría fallar ese cálculo en el backend.
+  // La cintura la valido solo si viene escrita, porque es un dato opcional de la ficha.
   function validar() {
     const nuevos = {};
     if (!formulario.fecha) nuevos.fecha = "Indica la fecha del control.";
@@ -96,7 +104,11 @@ export default function FichaClinica() {
     setErrores(nuevos);
     if (Object.keys(nuevos).length > 0) return;
 
-    // Los campos opcionales viajan como null cuando quedan en blanco.
+    // Los campos opcionales viajan como null cuando quedan en blanco, no como cadena vacía: en la
+    // base "sin dato" es NULL, y un "" guardaría un valor que después parecería un dato tomado.
+    // Convierto peso, talla y cintura con Number porque los inputs entregan texto y la API espera
+    // números; el IMC no va en el cuerpo, lo calcula el backend desde el peso y la talla para no
+    // guardar dos veces la misma información.
     const cuerpo = {
       correoPaciente: consultado,
       fecha: formulario.fecha,

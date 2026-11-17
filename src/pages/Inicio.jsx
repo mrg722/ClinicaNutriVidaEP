@@ -3,6 +3,9 @@ import { Button, Card, Col, Container, Row } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { guardarJSON, leerJSON } from "../utils/persistencia";
 
+// Exporto esta lista para que la vista de Servicios use exactamente la misma: el inicio muestra
+// el resumen y esa página el detalle, pero los servicios son los mismos y con dos copias uno de
+// los dos lados quedaría desactualizado al agregar algo.
 export const serviciosPrincipales = [
   {
     titulo: "Consulta nutricional",
@@ -21,20 +24,29 @@ export const serviciosPrincipales = [
   },
 ];
 
+// Compruebo que sea un arreglo aunque leerJSON ya controle los errores: lo guardado pudo quedar
+// de una versión anterior con otra forma, y un valor que no sea arreglo rompería el includes.
 function leerGuardados() {
   const valor = leerJSON("nutrivida-guardados", []);
   return Array.isArray(valor) ? valor : [];
 }
 
 export default function Inicio() {
+  // Le paso la función a useState sin llamarla, para que lea localStorage una sola vez al montar
+  // el componente y no en cada renderizado.
   const [guardados, setGuardados] = useState(leerGuardados);
 
+  // Un mismo botón guarda y quita: si el servicio ya está en la lista lo saco, y si no lo agrego.
   function guardarServicio(titulo) {
     const nuevos = guardados.includes(titulo)
       ? guardados.filter((item) => item !== titulo)
       : [...guardados, titulo];
 
+    // Armo un arreglo nuevo en lugar de modificar el actual, porque React compara referencias:
+    // si mutara el mismo arreglo no detectaría el cambio y la pantalla no se actualizaría.
     setGuardados(nuevos);
+    // Guardo con el valor nuevo y no con el estado, que todavía tiene el anterior: la
+    // actualización de estado no es inmediata y escribiría el dato viejo en localStorage.
     guardarJSON("nutrivida-guardados", nuevos);
   }
 
@@ -62,6 +74,8 @@ export default function Inicio() {
               </div>
             </Col>
             <Col lg={4} className="text-center">
+              {/* Los emoji son decorativos, así que van con aria-hidden: si no, el lector de
+                  pantalla leería "palta" en medio del texto y solo estorbaría. */}
               <div className="nv-hero-icon" aria-hidden="true">🥑</div>
               <p className="fw-semibold">Pequeños hábitos, grandes cambios</p>
             </Col>
@@ -90,6 +104,10 @@ export default function Inicio() {
                       </div>
                       <Card.Title as="h3">{servicio.titulo}</Card.Title>
                       <Card.Text>{servicio.descripcion}</Card.Text>
+                      {/* Marco el estado de tres formas a la vez: el color del botón, el texto y
+                          aria-pressed. El color por sí solo no basta para quien no distingue
+                          colores, y aria-pressed es lo que le dice al lector de pantalla que este
+                          botón se queda activado y no es una simple acción. */}
                       <Button
                         variant={guardado ? "success" : "outline-success"}
                         onClick={() => guardarServicio(servicio.titulo)}

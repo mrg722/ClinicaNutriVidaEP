@@ -27,6 +27,11 @@ function cargarProductos() {
   return Array.isArray(guardados) ? guardados : productosIniciales;
 }
 
+// Uso la clave "carrito" sin prefijo porque es la misma que escriben los scripts de la primera
+// entrega: así la aplicación React recoge lo que la persona había dejado en las páginas HTML.
+// Esa compatibilidad obliga a desconfiar de lo guardado, porque pudo quedar con el formato
+// antiguo. Por eso descarto las líneas que no tengan id o precio usable, en vez de confiar en
+// ellas: un precio que no sea número haría aparecer "NaN" en el total del carrito.
 function cargarCarrito() {
   const guardados = leerJSON("carrito", []);
   if (!Array.isArray(guardados)) return [];
@@ -40,6 +45,9 @@ function cargarCarrito() {
         Number.isFinite(Number(item.precio)) &&
         Number(item.precio) >= 0,
     )
+    // Normalizo precio y cantidad a número al cargar y no cada vez que calculo el total: si la
+    // cantidad quedara como texto, sumarle uno la concatenaría ("1"+1 daría "11"). El mínimo de 1
+    // evita que una línea quedada en cero siga ocupando sitio en la tabla.
     .map((item) => ({
       ...item,
       precio: Number(item.precio),
@@ -51,6 +59,9 @@ function Aplicacion() {
   // Catálogo local de respaldo: lo conservo porque la tienda y el carrito deben
   // seguir funcionando antes de iniciar sesión.
   const [productosLocales, setProductosLocales] = useState(cargarProductos);
+  // El carrito vive aquí arriba y no dentro de la vista del carrito, porque el contador del
+  // encabezado y la tabla tienen que mostrar lo mismo: con dos estados separados se
+  // desincronizarían. Las vistas lo reciben por props junto con las funciones que lo modifican.
   const [carrito, setCarrito] = useState(cargarCarrito);
   // Con sesión abierta el catálogo se alimenta de GET /servicios?soloActivos=true.
   const catalogo = useCatalogoServicios(productosLocales);
@@ -155,7 +166,13 @@ function Aplicacion() {
         <Route path="/login" element={<Acceso />} />
         <Route path="/registro" element={<Acceso modo="registro" />} />
 
-        {/* Rutas del paciente: también las puede ver el administrador. */}
+        {/* Agrupo las rutas privadas bajo un Route sin path que monta RutaProtegida: así la
+            comprobación de rol se escribe una vez por grupo y no se me puede olvidar en una ruta
+            nueva. Aun así, esto solo decide qué se muestra; lo que impide de verdad el acceso a
+            los datos es el backend, que revisa el rol del token en cada endpoint. */}
+
+        {/* Rutas del paciente: también las puede ver el administrador, porque desde el panel
+            necesita revisar las citas sin tener que entrar con otra cuenta. */}
         <Route element={<RutaProtegida roles={["PACIENTE", "ADMIN"]} />}>
           <Route path="/mis-citas" element={<MisCitas />} />
           <Route path="/mi-progreso" element={<MiProgreso />} />
@@ -181,6 +198,8 @@ function Aplicacion() {
           />
         </Route>
 
+        {/* El comodín va al final porque las rutas se evalúan en orden: si estuviera arriba,
+            atraparía todas las direcciones y ninguna vista llegaría a montarse. */}
         <Route path="*" element={<NoEncontrada />} />
       </Routes>
       <PiePagina />

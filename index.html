@@ -1,4 +1,8 @@
 
+<!-- Esta es la única página de la aplicación React: Vite la usa como plantilla y React pinta
+     todas las vistas dentro del div #root, sin recargar el documento al cambiar de ruta. Por eso
+     aquí no hay encabezado ni menú escritos a mano, al contrario de las páginas de la primera
+     entrega: esa estructura la montan los componentes. -->
 <!doctype html>
 <html lang="es">
   <head>
@@ -9,7 +13,10 @@
     <title>Clínica NutriVida</title>
   </head>
   <body>
+    <!-- Dejo el div vacío a propósito: es el punto donde main.jsx monta la aplicación. -->
     <div id="root"></div>
+    <!-- type="module" es lo que permite usar import/export en el navegador y lo que necesita
+         Vite para reemplazar los módulos en caliente mientras desarrollo. -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
