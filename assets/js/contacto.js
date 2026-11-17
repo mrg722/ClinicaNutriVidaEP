@@ -1,9 +1,15 @@
+// Formulario de contacto de la primera entrega. No hay servidor de correo detrás: el objetivo
+// evaluado era la validación completa de los cinco campos y el aviso de resultado, así que el
+// envío se simula. Por eso el mensaje de éxito dice que se envió, pero nada sale del navegador.
 document.addEventListener('DOMContentLoaded', () =>
 {
     const form = document.getElementById('form-contacto');
 
     if (!form) return;
 
+    // Misma estrategia que en el resto de los formularios: valido mientras la persona escribe
+    // para que vea el error en el momento, y recibo la regla como función para no repetir el
+    // enganche del evento en cada campo.
     const validarCampoEnTiempoReal = (id, validar) =>
     {
         const campo = document.getElementById(id);
@@ -25,6 +31,10 @@ document.addEventListener('DOMContentLoaded', () =>
         });
     };
 
+    // Cada regla devuelve true si pasa, o el mensaje de error si no: así una misma función sirve
+    // para decidir y para explicar, sin tener que devolver un objeto con dos campos.
+    // Separo "está vacío" de "está mal escrito" porque son errores distintos y la persona
+    // necesita saber si le falta el dato o si lo escribió con un formato que no acepto.
     validarCampoEnTiempoReal('nombre', value =>
     {
         if (!value.trim())
@@ -73,6 +83,8 @@ document.addEventListener('DOMContentLoaded', () =>
             : 'El asunto debe tener al menos 3 caracteres.';
     });
 
+    // Exijo un mínimo de 10 caracteres en el mensaje y 3 en el asunto: no es un capricho, es para
+    // que no lleguen consultas de una palabra que después nadie puede responder.
     validarCampoEnTiempoReal('mensaje', value =>
     {
         if (!value.trim())
@@ -87,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () =>
 
     form.addEventListener('submit', e =>
     {
+        // Sin preventDefault el navegador recargaría la página y borraría el mensaje de resultado.
         e.preventDefault();
 
         clearAllFieldErrors(form);
@@ -97,6 +110,10 @@ document.addEventListener('DOMContentLoaded', () =>
                 new FormData(form).entries()
             );
 
+        // Repito aquí las mismas reglas del modo en vivo. Parece duplicado, pero es necesario: la
+        // validación en vivo solo corre si la persona escribe en el campo, y un formulario enviado
+        // con Enter o con valores pegados nunca dispara ese evento. Este bloque es el único que
+        // de verdad decide si el envío continúa.
         if (!v.nombre.trim())
         {
             return setFieldError(
@@ -183,6 +200,8 @@ document.addEventListener('DOMContentLoaded', () =>
             'success'
         );
 
+        // Limpio el formulario recién después de confirmar, para que se note que el envío terminó
+        // y para que no se manden dos veces los mismos datos por un segundo clic.
         form.reset();
     });
 });

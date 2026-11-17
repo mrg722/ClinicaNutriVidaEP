@@ -1,7 +1,16 @@
+/* Hoja de estilos de las páginas HTML de la primera entrega. La escribí a mano, sin framework,
+   y por eso parte definiendo sus propias bases antes de cualquier componente. */
+
+/* Cambio el box-sizing de todo el documento a border-box porque así el padding y el borde quedan
+   dentro del ancho que yo declaro. Con el valor por omisión, cada caja con padding se pasaría de
+   su columna y tendría que ir restando esos píxeles a mano en cada medida. */
 *,:before,:after
 {
     box-sizing:border-box
 }
+/* Defino la paleta y las medidas como variables en :root, en un solo lugar, para poder cambiar un
+   color de todo el sitio editando una línea. Las nombro por su función (fondo, superficie,
+   peligro) y no por el color: así el nombre sigue teniendo sentido si mañana cambio el tono. */
 :root
 {
     --fondo:#070a10;

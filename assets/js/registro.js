@@ -1,3 +1,8 @@
+// Registro público de pacientes de la primera entrega. Todo se resuelve en el navegador porque
+// aún no existía el backend: la lista de usuarios queda en localStorage bajo la misma clave que
+// lee el panel de administración, y eso es lo que hace que un registro nuevo aparezca allá.
+// Las comunas van agrupadas por región para encadenar los dos selects y evitar que alguien
+// combine una región con una comuna que no le pertenece.
 const comunasPorRegion =
 {
     "Arica y Parinacota": ["Arica", "Camarones", "Putre", "General Lagos"],
@@ -20,12 +25,17 @@ const comunasPorRegion =
 
 const USUARIOS_KEY = "nutrivida_usuarios";
 
+// Leo la lista con dos intentos: primero la clave actual y, si no hay nada, reviso si quedó un
+// usuario guardado con el formato viejo. Lo hago para no perder el dato de quien se registró con
+// una versión anterior de la página, que es el caso que me obligó a agregar la migración.
 function obtenerUsuarios()
 {
     try
     {
         const guardados = JSON.parse(localStorage.getItem(USUARIOS_KEY));
 
+        // Compruebo que sea un arreglo, no solo que el JSON sea válido: cualquier otra forma
+        // rompería los recorridos que hago después.
         if (Array.isArray(guardados))
         {
             return guardados;
@@ -38,12 +48,17 @@ function obtenerUsuarios()
 
     try
     {
+        // Esta es la migración del formato antiguo, que guardaba un solo usuario en otra clave.
+        // Lo convierto a la lista nueva y lo dejo escrito, para que esta conversión ocurra una
+        // sola vez y las siguientes cargas usen ya la clave actual.
         const usuarioAnterior = JSON.parse(
             localStorage.getItem("nutrivida_usuario_demo")
         );
 
         if (usuarioAnterior)
         {
+            // Le completo rol y estado porque el formato viejo no los tenía, y sin ellos el
+            // listado del panel mostraría columnas vacías.
             const migrado =
             [
                 {
@@ -73,6 +88,8 @@ function obtenerUsuarios()
     return [];
 }
 
+// Dejo el guardado en una función aparte para que todas las escrituras pasen por el mismo lugar
+// y nadie escriba en la clave equivocada por error.
 function guardarUsuarios(usuarios)
 {
     localStorage.setItem(
@@ -81,8 +98,12 @@ function guardarUsuarios(usuarios)
     );
 }
 
+// Valido el RUN con su dígito verificador y no solo con el formato: un número bien escrito pero
+// inválido entraría igual y después no habría manera de identificar a la persona en la clínica.
 function validarRun(run)
 {
+    // Normalizo primero, porque la gente escribe el RUN con puntos, con guión o sin nada y el
+    // cálculo necesita únicamente los dígitos más el verificador.
     const rut = run
         .replace(/[.\-]/g, "")
         .toUpperCase();
@@ -92,6 +113,9 @@ function validarRun(run)
         return false;
     }
 
+    // Módulo 11 del Registro Civil: recorro el número de derecha a izquierda multiplicando por la
+    // serie 2,3,4,5,6,7 y volviendo a 2 al pasarme. Empiezo en length-2 para saltarme el dígito
+    // verificador, que es justamente el valor que quiero recalcular y comparar.
     let suma = 0;
     let multiplicador = 2;
 
@@ -107,6 +131,8 @@ function validarRun(run)
 
     const resultado = 11 - (suma % 11);
 
+    // Los dos casos especiales del algoritmo: el 11 se escribe como 0 y el 10 como K. Sin estas
+    // excepciones rechazaría por error todos los RUN que terminan en 0 o en K.
     const digito =
         resultado === 11
             ? "0"
@@ -127,6 +153,8 @@ document.addEventListener("DOMContentLoaded", () =>
     const comuna = document.getElementById("comuna");
     const fecha = document.getElementById("fecha-nacimiento");
 
+    // Lleno el select de regiones desde el objeto para que la lista de la página y las comunas
+    // disponibles salgan de la misma fuente y no puedan contradecirse.
     Object.keys(comunasPorRegion).forEach((nombreRegion) =>
     {
         const option = document.createElement("option");
@@ -137,6 +165,8 @@ document.addEventListener("DOMContentLoaded", () =>
         region.appendChild(option);
     });
 
+    // Al cambiar de región rearmo las comunas desde cero: lo primero es vaciar el select, para que
+    // no quede seleccionada una comuna de la región anterior.
     region.addEventListener("change", () =>
     {
         comuna.innerHTML =
@@ -154,14 +184,19 @@ document.addEventListener("DOMContentLoaded", () =>
             }
         );
 
+        // Mantengo las comunas deshabilitadas mientras no haya región: así queda claro el orden
+        // y no ofrezco una lista vacía.
         comuna.disabled = !region.value;
 
+        // Limpio el error de región en cuanto elige una, sin esperar al próximo envío.
         if (region.value)
         {
             clearFieldError("region");
         }
     });
 
+    // Tope de la fecha de nacimiento en hoy: nadie nace en el futuro, y así el propio calendario
+    // lo impide. Lo calculo en cada carga porque un valor fijo se vencería al día siguiente.
     if (fecha)
     {
         fecha.max = new Date()
@@ -170,7 +205,8 @@ document.addEventListener("DOMContentLoaded", () =>
     }
 
     // VALIDACIÓN EN TIEMPO REAL
-
+    // Valido mientras la persona escribe para que corrija en el momento, y recibo la regla como
+    // función para no repetir el enganche del evento en cada uno de los campos.
     const validarCampoEnTiempoReal = (id, validar) =>
     {
         const campo = document.getElementById(id);
@@ -234,6 +270,10 @@ document.addEventListener("DOMContentLoaded", () =>
             : "La contraseña debe tener entre 4 y 10 caracteres.";
     });
 
+    // El largo de 4 a 10 caracteres lo pide el enunciado del caso; no es lo que elegiría para una
+    // clave real, pero es el requisito que tengo que cumplir.
+    // La confirmación la comparo leyendo el otro campo en el momento, no una copia guardada: así
+    // el aviso es correcto aunque la persona cambie la primera clave después de confirmarla.
     validarCampoEnTiempoReal("password-confirmar", (value) =>
     {
         const password =
@@ -245,7 +285,9 @@ document.addEventListener("DOMContentLoaded", () =>
     });
 
     // VALIDACIÓN AL ENVIAR
-
+    // Repito todas las reglas aquí a propósito: la validación en vivo solo se ejecuta si la
+    // persona toca el campo, así que un formulario enviado con Enter o con valores pegados
+    // llegaría sin revisar. Este bloque es el único que decide si el registro se guarda.
     form.addEventListener("submit", (event) =>
     {
         event.preventDefault();
@@ -258,6 +300,9 @@ document.addEventListener("DOMContentLoaded", () =>
                 new FormData(form).entries()
             );
 
+        // Normalizo RUN y correo antes de validar y de guardar, porque más abajo los uso para
+        // buscar duplicados: si uno quedara en mayúsculas y otro en minúsculas, la misma persona
+        // podría registrarse dos veces sin que la comparación lo detecte.
         const runNormalizado =
             values.run.trim().toUpperCase();
 
@@ -296,6 +341,10 @@ document.addEventListener("DOMContentLoaded", () =>
             );
         }
 
+        // La fecha de nacimiento es opcional, así que solo la reviso si viene con algo. Vuelvo a
+        // comprobarla aunque ya puse el atributo max: ese tope es ayuda del navegador y se puede
+        // quitar desde las herramientas de desarrollo. Le agrego 'T00:00:00' para que la fecha se
+        // interprete en horario local y no en UTC, donde en Chile podría caer un día antes.
         if (
             values["fecha-nacimiento"] &&
             new Date(
@@ -355,6 +404,10 @@ document.addEventListener("DOMContentLoaded", () =>
             );
         }
 
+        // Reviso duplicados por RUN y por correo: los dos identifican a la misma persona y
+        // repetir cualquiera de ellos crearía dos fichas de alguien que es uno solo. Esto funciona
+        // aquí porque la lista completa está en este navegador; con una base de datos real la
+        // comprobación tiene que hacerla el servidor, que es el único que ve todos los registros.
         const usuarios = obtenerUsuarios();
 
         const duplicadoRun =
@@ -385,6 +438,9 @@ document.addEventListener("DOMContentLoaded", () =>
             );
         }
 
+        // Calculo el id como el mayor existente más uno, no como el largo del arreglo más uno: si
+        // se eliminara un usuario del medio, el largo volvería a entregar un id ya usado. Parto
+        // desde 2 porque las dos primeras filas de ejemplo vienen escritas en el HTML del panel.
         const siguienteId =
             usuarios.reduce(
                 (max, usuario) =>
@@ -395,8 +451,10 @@ document.addEventListener("DOMContentLoaded", () =>
                 2
             ) + 1;
 
-        // No se almacena la contraseña.
-
+        // No se almacena la contraseña: armo el objeto campo por campo justamente para dejarla
+        // fuera, en vez de guardar "values" completo. localStorage es texto plano que cualquiera
+        // puede leer desde la consola del navegador, así que una clave ahí quedaría a la vista.
+        // Guardar contraseñas es trabajo del backend, que las deja cifradas con BCrypt.
         const usuario =
         {
             id: siguienteId,
@@ -425,6 +483,9 @@ document.addEventListener("DOMContentLoaded", () =>
 
         form.reset();
 
+        // form.reset() no sirve para las comunas: devuelve el select a las opciones que yo le
+        // agregué por código, que son las de la última región elegida. Por eso lo vacío y lo
+        // deshabilito a mano, para que el formulario quede igual que al abrirlo.
         comuna.innerHTML =
             '<option value="">Selecciona una comuna</option>';
 
