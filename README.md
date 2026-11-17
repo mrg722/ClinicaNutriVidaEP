@@ -1,4 +1,4 @@
-# Clínica NutriVida · Evaluación Parcial 2
+# Clínica NutriVida · Evaluación Parcial 3
 
 Frontend de Clínica NutriVida para DSY1104 Desarrollo FullStack II. La EP2 amplía el proyecto existente con React/Vite, conservando la identidad, los recursos y el catálogo del trabajo anterior.
 
