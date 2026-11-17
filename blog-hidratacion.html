@@ -1,3 +1,9 @@
+<!-- Artículo del blog sobre hidratación. Página propia, con su título y su descripción.
+
+     Declaro lang="es" para que el lector de pantalla use la pronunciación correcta, y
+     charset utf-8 para que las tildes y la ñ se vean bien en cualquier navegador. El
+     meta viewport es lo que hace que los media query de estilos.css funcionen en el
+     celular; sin él el teléfono dibujaría la página como si fuera un escritorio. -->
 <!DOCTYPE html>
 <html lang="es">
     <head>
@@ -8,6 +14,12 @@
         <link href="assets/css/estilos.css" rel="stylesheet">
     </head>
     <body>
+        <!-- El encabezado y el menú lateral son idénticos en todas las páginas. Al no haber
+             plantillas ni componentes en esta entrega, la única forma de reutilizarlos era
+             repetir el marcado; por eso los estilos y el comportamiento sí viven en un solo
+             archivo CSS y un solo archivo JS, y lo que se repite aquí es nada más la estructura.
+             El botón declara aria-controls y aria-expanded para que menu.js solo tenga que
+             cambiar el valor del atributo y el estado quede anunciado al lector de pantalla. -->
         <header class="topbar">
             <div class="topbar-inner">
                 <button
@@ -164,6 +176,11 @@
                 <span>Versión frontend · 07/09/2026</span>
             </div>
         </footer>
+        <!-- Cargo los scripts al final del body y no en el head: así el navegador alcanza a
+             pintar la página antes de ejecutarlos, y los elementos que ellos buscan por id ya
+             existen cuando corren.
+             form-utils.js va primero porque define las validaciones y los mensajes de error que
+             usan los demás, y menu.js queda al final porque no depende de ninguno. -->
         <script src="assets/js/menu.js">
         </script>
     </body>

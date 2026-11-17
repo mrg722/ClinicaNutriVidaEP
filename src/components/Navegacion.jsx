@@ -2,7 +2,9 @@ import { Badge, Button, Container, Nav, Navbar } from "react-bootstrap";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useSesion } from "../context/SesionContext";
 
-// Enlaces visibles para cualquier visitante.
+// Declaro los enlaces como datos y no escritos uno por uno en el JSX: así el menú se arma
+// recorriendo la lista que corresponde al rol, y agregar una sección es sumar una línea aquí.
+// Estos son los públicos, visibles sin haber iniciado sesión.
 const enlacesPublicos = [
   { to: "/", texto: "Inicio", fin: true },
   { to: "/servicios", texto: "Servicios" },
@@ -13,6 +15,9 @@ const enlacesPublicos = [
 
 // Enlaces que dependen del rol: cada perfil ve solo lo que puede usar, por eso
 // un paciente nunca ve la agenda profesional ni la administración.
+// Ocultar el enlace es comodidad, no seguridad: quien escriba la dirección a mano llegaría a la
+// vista igual. Lo que impide de verdad el acceso es el backend, que revisa el rol del token en
+// cada endpoint y responde 403 aunque la pantalla se haya alcanzado a pintar.
 const enlacesPorRol = {
   PACIENTE: [
     { to: "/mis-citas", texto: "Mis citas" },
