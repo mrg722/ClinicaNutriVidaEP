@@ -23,6 +23,47 @@ function rutasDeLaAplicacion() {
 
 export default defineConfig({
   plugins: [react(), rutasDeLaAplicacion()],
+
+  // Configuración del servidor de vista previa, que es el que uso para demostrar el sistema
+  // ya compilado. Cumple el mismo papel que Nginx en el servidor: una sola dirección entrega
+  // la aplicación React y reparte las llamadas a cada microservicio según el prefijo.
+  //
+  // Lo necesito porque al exponer el sistema por un túnel solo queda abierta una puerta. Si
+  // publicara únicamente React, sus llamadas a localhost:8081 apuntarían al computador de
+  // quien abre la página, no al mío, y no encontrarían ningún backend.
+  preview: {
+    port: 4173,
+
+    // Escucho en todas las interfaces de red y no solo en localhost. Sin esto, el servidor
+    // sería visible únicamente desde este mismo equipo, y necesito que otro computador de la
+    // misma red pueda abrir la página escribiendo mi dirección IP.
+    host: true,
+
+    // Vite rechaza las peticiones cuyo encabezado Host no reconoce. Al pasar por un túnel el
+    // Host es el dominio público que genera el túnel, que no conozco de antemano, así que
+    // acepto cualquiera. Es un servidor de demostración temporal en mi equipo, no un servidor
+    // público permanente.
+    allowedHosts: true,
+
+    proxy: {
+      // Estos dos prefijos son los mismos que usa la configuración de Nginx del backend,
+      // y los mismos que tiene el archivo .env.production, así que el frontend compilado
+      // funciona igual aquí que en un servidor, sin recompilarlo.
+      "/api/auth-service": {
+        target: "http://localhost:8081",
+        changeOrigin: true,
+        // Quito el prefijo público y dejo la ruta que el microservicio espera de verdad:
+        // /api/auth-service/v1/auth/login llega como /api/v1/auth/login al puerto 8081.
+        rewrite: (ruta) => ruta.replace(/^\/api\/auth-service/, "/api"),
+      },
+      "/api/citas-service": {
+        target: "http://localhost:8082",
+        changeOrigin: true,
+        rewrite: (ruta) => ruta.replace(/^\/api\/citas-service/, "/api"),
+      },
+    },
+  },
+
   test: {
     environment: "jsdom",
     setupFiles: "./src/test/setup.js",
