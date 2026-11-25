@@ -37,7 +37,8 @@ Ningún servicio importa a otro ni conoce la URL del microservicio ajeno.
 - Citas del paciente y agenda profesional: `GET /citas/mias`,
   `PUT /citas/{id}` y `PUT /citas/{id}/estado`.
 - Progreso y ficha clínica: `GET /mediciones/mias`,
-  `GET /mediciones/paciente/{correo}`, `POST`, `PUT` y `DELETE /mediciones`.
+  `GET /mediciones/paciente/{correo}`, `POST /mediciones`, `PUT /mediciones/{id}` y
+  `DELETE /mediciones/{id}`.
 - Panel de administración: `GET /usuarios`, CRUD de usuarios y de servicios, y
   `GET /estadisticas`.
 
