@@ -23,5 +23,3 @@ coverage/
 !.env.development
 !.env.production
 
-# Configuracion local del editor
-.claude/
