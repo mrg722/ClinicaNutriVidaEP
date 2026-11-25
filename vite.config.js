@@ -21,6 +21,20 @@ function rutasDeLaAplicacion() {
   };
 }
 
+// El navegador agrega el encabezado Origin con la dirección desde la que se abrió la página.
+// Cuando esa dirección es la de un túnel, Spring Security la ve como un origen que no tiene
+// autorizado y rechaza la petición con 403, aunque para la persona sea la misma página.
+//
+// Lo correcto no es abrir el CORS del backend a cualquier dominio, sino quitar ese encabezado
+// aquí: una vez que el proxy reenvía la petición ya no es el navegador hablando con otro
+// origen, es este servidor hablando con el microservicio, y eso no es una petición CORS.
+// Así el backend conserva su política estricta y la demostración funciona igual.
+function quitarEncabezadoOrigen(proxy) {
+  proxy.on("proxyReq", (peticion) => {
+    peticion.removeHeader("origin");
+  });
+}
+
 export default defineConfig({
   plugins: [react(), rutasDeLaAplicacion()],
 
@@ -55,11 +69,13 @@ export default defineConfig({
         // Quito el prefijo público y dejo la ruta que el microservicio espera de verdad:
         // /api/auth-service/v1/auth/login llega como /api/v1/auth/login al puerto 8081.
         rewrite: (ruta) => ruta.replace(/^\/api\/auth-service/, "/api"),
+        configure: quitarEncabezadoOrigen,
       },
       "/api/citas-service": {
         target: "http://localhost:8082",
         changeOrigin: true,
         rewrite: (ruta) => ruta.replace(/^\/api\/citas-service/, "/api"),
+        configure: quitarEncabezadoOrigen,
       },
     },
   },
